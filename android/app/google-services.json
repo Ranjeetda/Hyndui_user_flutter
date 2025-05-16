@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "199859184696",
+    "firebase_url": "https://lastmilemobility-d9439-default-rtdb.firebaseio.com",
+    "project_id": "lastmilemobility-d9439",
+    "storage_bucket": "lastmilemobility-d9439.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:199859184696:android:7821add7bddb329b5ab2cd",
+        "android_client_info": {
+          "package_name": "com.lastmile.driverapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCGmOadZf4g_j3NZTQxDtytWXJ8NOQg8s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:199859184696:android:31026b822523662d5ab2cd",
+        "android_client_info": {
+          "package_name": "com.lastmile.userapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCGmOadZf4g_j3NZTQxDtytWXJ8NOQg8s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
