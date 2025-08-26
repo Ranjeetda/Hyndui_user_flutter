@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import '../../provider/fare_generate_seat.dart';
 import '../../provider/profile_fetch_provider.dart';
+import '../../provider/refresh_token_provider.dart';
 import '../../provider/route_search_provider.dart';
 import '../../provider/user_default_booking_provider.dart';
 import '../../resource/app_colors.dart';
@@ -297,9 +298,18 @@ class _HomeScreen extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    //PrefUtils.setBearerToken("Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3YWxsZXRJZCI6IjY3NjgzZDkxZjkxYzkzY2Q3YzI0Mjg0OCIsInVzZXJJZCI6IjY3NjgzZDkxZjkxYzkzY2Q3YzI0Mjg0MiIsImlhdCI6MTc0NjM2NjYxMiwiZXhwIjoxNzUwMjcyOTc4OTg2fQ.b8xrAqZgyBh7ouDV5Oxk-p48bZn7Au9Srd4VdOY9b5k");
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<UserDefaultBookingProvider>(context, listen: false)
           .userDefaultBookRequestService();
+
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<RefreshTokenProvider>(context, listen: false)
+          .refreshToken();
+
     });
     _getCurrentLocation();
     _getProfileUser();
@@ -1140,6 +1150,15 @@ class _HomeScreen extends State<HomeScreen> {
                                                           child: ElevatedButton(
                                                             onPressed: () {
                                                               selectedSeatNo = provider.defaultBookingList[index]['booking_details'][0]['seat_nos'];
+                                                              if(bookingType=='office'){
+                                                                PrefUtils.setOfficePickupAdd(provider.defaultBookingList[index]['booking_details'][0]['pickup_name']);
+                                                                PrefUtils.setOfficeDropAdd(provider.defaultBookingList[index]['booking_details'][0]['dropoff_title']);
+                                                                PrefUtils.setOfficeBookingDate(provider.defaultBookingList[index]['booking_details'][0]['booking_date']);
+                                                                PrefUtils.setOfficePickupTime(provider.defaultBookingList[index]['booking_details'][0]['start_time']);
+                                                                PrefUtils.setOfficeDropTime(provider.defaultBookingList[index]['booking_details'][0]['drop_time']);
+                                                                PrefUtils.setOfficeBusName(provider.defaultBookingList[index]['booking_details'][0]['bus_detail']['name']);
+                                                               // PrefUtils.setWalletBalance(provider.defaultBookingList[index]['booking_details'][0]['user_total_wallet_amount'].toString());
+                                                              }
                                                               _getFareSeat(provider.defaultBookingList[index]);
                                                             },
                                                             style:
@@ -1244,7 +1263,9 @@ class _HomeScreen extends State<HomeScreen> {
                                                               [0]['start_time'],provider.defaultBookingList[
                                                               index][
                                                               'booking_details']
-                                                              [0]['drop_time']),
+                                                              [0]['drop_time']
+
+                                                              ),
                                                               style: TextStyle(
                                                                   fontSize: 14),
                                                             ),
@@ -1388,7 +1409,7 @@ class _HomeScreen extends State<HomeScreen> {
                   ),
                   title: const Text('Pay Per Ride',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  subtitle: const Text('Proceed to pay ₹30 for this ride',
+                  subtitle:  Text('Proceed to pay ₹${_faredata['final_total_fare']} for this ride',
                       style: TextStyle(fontSize: 14, color: Colors.grey)),
                 ),
               ),
@@ -1446,4 +1467,5 @@ class _HomeScreen extends State<HomeScreen> {
       ),
     );
   }
+
 }

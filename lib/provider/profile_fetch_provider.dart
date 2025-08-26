@@ -7,8 +7,8 @@ class ProfileFetchProvider with ChangeNotifier {
 
   Future<http.Response> fetchProfile() async {
     final url = Uri.parse(URLS.profileFetch);
+    print("RanjeetTest ==========> " +PrefUtils.getBearerToken()!);
     final headers = {
-      "Content-Type": "application/json",
       "Authorization": PrefUtils.getBearerToken()!,
     };
     try {

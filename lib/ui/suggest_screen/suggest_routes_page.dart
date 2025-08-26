@@ -1,14 +1,13 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:lmm_user/resource/app_colors.dart';
 import 'package:place_picker_google/place_picker_google.dart';
 
 import '../../provider/suggest_create_provider.dart';
-
 
 class SuggestRoutesPage extends StatefulWidget {
   @override
@@ -19,7 +18,6 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
   late GoogleMapController mapController;
   Completer<GoogleMapController> _controller = Completer();
   String googleApikey = "AIzaSyD0oY8U_-sWgRRiaOC-U7_TAf0iSZGUHow";
-  String location = "Search Location";
   Marker? _pickupMarker;
   Marker? _dropoffMarker;
   LatLng? _pickupLatLng;
@@ -36,19 +34,47 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
   double? drop_lng;
   String? drop_city;
   String? drop_state;
+
   bool isLoading = false;
 
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
 
+  @override
+  void initState() {
+    super.initState();
+    _setInitialLocation();
+  }
+
+  Future<void> _setInitialLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        print('Location permission denied');
+        return;
+      }
+    }
+
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    final latLng = LatLng(position.latitude, position.longitude);
+
+    final controller = await _controller.future;
+    controller.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(
+      target: latLng,
+      zoom: 15,
+    )));
+
+    _setLocation(latLng, isPickup: true);
+  }
 
   void _handleMapTap(LatLng position) {
     if (_pickupLatLng == null) {
       _setLocation(position, isPickup: true);
     } else if (_dropoffLatLng == null) {
       _setLocation(position, isPickup: false);
+      _drawRoute();
     } else {
-      // Reset both if already selected
       setState(() {
         _pickupLatLng = null;
         _dropoffLatLng = null;
@@ -100,22 +126,24 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
       ),
     );
 
-
-    if (result.points.isNotEmpty) {
-      final List<LatLng> polylineCoordinates = result.points
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
-
-      setState(() {
-        _polylines.clear();
-        _polylines.add(Polyline(
-          polylineId: PolylineId('route'),
-          points: polylineCoordinates,
-          color: Colors.blue,
-          width: 5,
-        ));
-      });
+    if (result.points.isEmpty) {
+      print('No polyline points found: ${result.errorMessage}');
+      return;
     }
+
+    final polylineCoordinates = result.points
+        .map((point) => LatLng(point.latitude, point.longitude))
+        .toList();
+
+    setState(() {
+      _polylines.clear();
+      _polylines.add(Polyline(
+        polylineId: PolylineId('route'),
+        points: polylineCoordinates,
+        color: Colors.blue,
+        width: 5,
+      ));
+    });
   }
 
   Future<Map<String, String?>> getCityStateFromLatLng(double lat, double lng) async {
@@ -135,62 +163,50 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
   }
 
   void _openPlacePicker(bool isPickup) async {
-
     LocationResult? result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PlacePicker(
           onPlacePicked: (LocationResult result) async {
-            print("Place Selected: ${result.formattedAddress}");
-            print("Latitude: ${result.latLng?.latitude}, Longitude: ${result.latLng?.longitude}");
+            final lat = result.latLng?.latitude;
+            final lng = result.latLng?.longitude;
+            if (lat == null || lng == null) return;
 
+            final latLng = LatLng(lat, lng);
+            mapController.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(target: latLng, zoom: 17)));
 
-            if (result != null) {
-              final lat = result.latLng?.latitude;
-              final lang = result.latLng?.longitude;
-              var newlatlang = LatLng(lat!, lang!);
+            final placeDetails = await getCityStateFromLatLng(lat, lng);
 
-              mapController.animateCamera(CameraUpdate.newCameraPosition(
-                  CameraPosition(target: newlatlang, zoom: 17)));
+            setState(() {
+              if (isPickup) {
+                _setLocation(latLng, isPickup: true);
+                pickup_address = result.formattedAddress;
+                pickup_lat = lat;
+                pickup_lng = lng;
+                pickup_city = placeDetails['city'];
+                pickup_state = placeDetails['state'];
+              } else {
+                _setLocation(latLng, isPickup: false);
+                drop_address = result.formattedAddress;
+                drop_lat = lat;
+                drop_lng = lng;
+                drop_city = placeDetails['city'];
+                drop_state = placeDetails['state'];
+              }
+              _drawRoute();
+            });
 
-              final placeDetails = await getCityStateFromLatLng(lat, lang);
-
-
-              setState(() {
-                location = result.formattedAddress!;
-                if(isPickup) {
-                  _setLocation(newlatlang, isPickup: isPickup);
-                  pickup_address = result.formattedAddress!;
-                  pickup_lat =result.latLng?.latitude;
-                  pickup_lng =result.latLng?.longitude;
-                  pickup_city = placeDetails['city'];
-                  pickup_state = placeDetails['state'];
-                  _pickupLatLng=newlatlang;
-                }else{
-                  _setLocation(newlatlang, isPickup: isPickup);
-                  drop_address = result.formattedAddress!;
-                  drop_lat =result.latLng?.latitude;
-                  drop_lng=result.latLng?.longitude;
-                  drop_city = placeDetails['city'];
-                  drop_state = placeDetails['state'];
-                  _dropoffLatLng =newlatlang;
-                }
-                _drawRoute();
-              });
-
-            }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("Location Confirmed: ${result.formattedAddress}")),
             );
-
-            Navigator.of(context).pop(); // Close Place Picker after confirmation
-          }, apiKey: googleApikey,
+            Navigator.of(context).pop();
+          },
+          apiKey: googleApikey,
         ),
       ),
     );
 
     if (result == null) {
       print("User canceled or an error occurred");
-      return;
     }
   }
 
@@ -207,11 +223,10 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
         pickup_city.toString(),
         pickup_state.toString(),
         drop_city.toString(),
-        drop_state!
+        drop_state!,
       );
       setState(() => isLoading = false);
       print('Response: $response');
-
       Navigator.of(context).pop();
     } catch (e) {
       setState(() => isLoading = false);
@@ -225,15 +240,10 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.white), // Back arrow icon
-          onPressed: () {
-            Navigator.pop(context); // Go back to the previous screen
-          },
+          icon: Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          "Suggest Route",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        title: Text("Suggest Route", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
         backgroundColor: AppColors.primaryColor,
       ),
       body: Stack(
@@ -248,6 +258,7 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
                       GoogleMap(
                         onMapCreated: (controller) {
                           mapController = controller;
+                          _controller.complete(controller);
                         },
                         initialCameraPosition: CameraPosition(
                           target: LatLng(37.7749, -122.4194),
@@ -255,32 +266,26 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
                         ),
                         markers: _markers,
                         polylines: _polylines,
-                        onTap: (position) {
-                          _handleMapTap(position);
-                        },
+                        onTap: _handleMapTap,
                       ),
                       Positioned(
                         bottom: 20,
                         left: 16,
                         right: 16,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: updateUserProfile,
                           style: ElevatedButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor:AppColors.primaryColor, // Use bg_btn_shape or colorPrimary
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            backgroundColor: AppColors.primaryColor,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           child: isLoading
-                              ? const CircularProgressIndicator(
-                              color: Colors.white)
-                              : const Text(
+                              ? CircularProgressIndicator(color: Colors.white)
+                              : Text(
                             "Submit",
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.white,
-                              fontFamily: 'TitilliumWeb',
                               fontWeight: FontWeight.w600,
                               letterSpacing: 1,
                             ),
@@ -295,7 +300,7 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
           ),
           SizedBox(
             height: 130,
-            child:  Card(
+            child: Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
@@ -303,86 +308,31 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Left Icons and Dotted Line
                     Column(
                       children: [
-                        // Top Icon (Pick-up circle)
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: Color(0xFF002B5B), // Dark blue
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        // Dotted Line
-                        Container(
-                          width: 2,
-                          height: 32,
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              left: BorderSide(
-                                color: Colors.grey,
-                                width: 1,
-                                style: BorderStyle.solid,
-                              ),
-                            ),
-                          ),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              return Column(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: List.generate(6, (index) {
-                                  return Container(
-                                    width: 2,
-                                    height: 2,
-                                    color: Colors.grey,
-                                  );
-                                }),
-                              );
-                            },
-                          ),
-                        ),
-                        // Bottom Icon (Drop-off map pin)
-                        Icon(
-                          Icons.location_on_outlined,
-                          color: Color(0xFF002B5B),
-                          size: 20,
-                        ),
+                        Container(width: 16, height: 16, decoration: BoxDecoration(color: Color(0xFF002B5B), shape: BoxShape.circle)),
+                        Container(width: 2, height: 32, margin: const EdgeInsets.symmetric(vertical: 4), color: Colors.grey),
+                        Icon(Icons.location_on_outlined, color: Color(0xFF002B5B), size: 20),
                       ],
                     ),
-
                     const SizedBox(width: 12),
-
-                    // Right Text Labels
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           InkWell(
-                            onTap: ()  {
-                              _openPlacePicker(true);
-                            },
+                            onTap: () => _openPlacePicker(true),
                             child: Text(
-                              pickup_address??'Pick-up Location',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[800],
-                              ),
+                              pickup_address ?? 'Pick-up Location',
+                              style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                             ),
                           ),
                           const Divider(height: 24),
                           InkWell(
-                            onTap: ()  {
-                              _openPlacePicker(false);
-                            },
+                            onTap: () => _openPlacePicker(false),
                             child: Text(
-                              drop_address??'Drop-off Location',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[800],
-                              ),
+                              drop_address ?? 'Drop-off Location',
+                              style: TextStyle(fontSize: 16, color: Colors.grey[800]),
                             ),
                           ),
                         ],
@@ -392,7 +342,7 @@ class _SuggestRoutesPageState extends State<SuggestRoutesPage> {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

@@ -252,8 +252,7 @@ class _ConfirmPaymentScreenState extends State<ConfirmPaymentScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("${PrefUtils.getOfficePickupTime()}  -  ${PrefUtils
-                          .getOfficeDropTime()}"),
+                      Text("${PrefUtils.getOfficePickupTime()}  -  ${PrefUtils.getOfficeDropTime()}"),
                       Row(
                         children: [
                           Text(PrefUtils.getOfficeBusName()),

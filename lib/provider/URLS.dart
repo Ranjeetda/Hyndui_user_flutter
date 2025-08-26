@@ -19,9 +19,10 @@ class URLS {
   static const String paymentPay = '${baseUrl}payments/pay';
   static const String postChat = '${baseUrl}chat/';
   static const String loadChat = '${baseUrl}chat/get';
+  static const String userMyTrips = '${baseUrl}users/my-trips';
+  static const String refreshToken = '${baseUrl}users/refresh-token';
 
-  static const String EMPLOYEE_DEPARTMENT_CONTACT_LIST_URL = baseUrl+'employee/employee-department-contact-list?';
-  static const String EMPLOYEE_AWARD_LIST_URL = baseUrl+'employee/employee-award-list';
+
   static const String EMPLOYEE_ATTENDANCE_LIST_URL = '${baseUrl}employee/employee-attendance-list?';
   static const String employeeFilterAttendanceListUrl = '${baseUrl}employee/employee-attendance-list-params';
   static const String EMPLOYEE_ATTENDANCE_TIME_LIST_URL = '${baseUrl}employee/employee-attendance-time?';

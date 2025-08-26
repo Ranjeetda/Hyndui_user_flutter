@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lmm_user/resource/image_paths.dart';
 import 'package:lmm_user/resource/pref_utils.dart';
@@ -14,8 +13,6 @@ import '../../provider/profile_fetch_provider.dart';
 import '../../provider/user_update_provider.dart';
 import '../../resource/Utils.dart';
 import '../../resource/app_colors.dart';
-import '../google_map_screen/google_maps.dart';
-import '../model/LocationModel.dart';
 import '../model/SocialLoginUserDetails.dart';
 
 class ProfileScreen extends StatefulWidget {

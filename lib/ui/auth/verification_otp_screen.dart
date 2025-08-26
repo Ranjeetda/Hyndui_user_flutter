@@ -52,7 +52,7 @@ class _VerificationOtpScreen extends State<VerificationOtpScreen> {
     http.Response response =
         await Provider.of<VerifyRegisterUserProvider>(context, listen: false)
             .sendVeryUserRequestService(
-               PrefUtils.getFcmToken(),
+                PrefUtils.getFcmToken(),
                 PrefUtils.getDeviceType(),
                 Otp,
                 isMobileVerified,

@@ -52,20 +52,29 @@ class TimeSlotScreen extends StatefulWidget {
 }
 
 class _TimeSlotScreenState extends State<TimeSlotScreen> {
-  DateTime currentDate = DateTime(2025, 4, 12); // Initial date
+  var mTotalVehicle = "";
 
-  void _goToPreviousDay() {
+  DateTime _selectedDate = DateTime.now();
+
+  void _changeDate(int days) {
     setState(() {
-      currentDate = currentDate.subtract(Duration(days: 1));
+      _selectedDate = _selectedDate.add(Duration(days: days));
+
+      String formattedDate = Utils.convertDateToBeautify(_selectedDate);
+      searchRouts(formattedDate, '00:00', widget.endDate!);
     });
   }
 
-  void _goToNextDay() {
-    setState(() {
-      currentDate = currentDate.add(Duration(days: 1));
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      searchRouts(widget.currentDate!, '00:00', widget.endDate!);
     });
   }
-  Future<void> searchRouts() async {
+
+  Future<void> searchRouts(
+      String currentDate, String currentTime, String endDate) async {
     Utils.showLoadingDialog(context);
     final response =
         await Provider.of<RouteSearchProvider>(context, listen: false)
@@ -74,9 +83,9 @@ class _TimeSlotScreenState extends State<TimeSlotScreen> {
                 widget.homeLng,
                 widget.officeLat,
                 widget.officeLng,
-                widget.currentDate!,
-                widget.currentTime!,
-                widget.endDate!,
+                currentDate,
+                currentTime,
+                endDate,
                 widget.bookingType!,
                 widget.pickStopUpId,
                 widget.dropStopId,
@@ -85,6 +94,9 @@ class _TimeSlotScreenState extends State<TimeSlotScreen> {
 
     print("Response Search Root ===========> ${response.body}");
     if (responseData['status'] == true) {
+      setState(() {
+        mTotalVehicle = responseData['data']['getnearestData'].length.toString();
+      });
       Utils.hideLoadingDialog();
     } else {
       Utils.hideLoadingDialog();
@@ -97,6 +109,8 @@ class _TimeSlotScreenState extends State<TimeSlotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final formattedDate = DateFormat('dd - MMM - yyyy').format(_selectedDate);
+
     return Scaffold(
         backgroundColor: const Color(0xFFF2F2F2),
         appBar: AppBar(
@@ -130,19 +144,17 @@ class _TimeSlotScreenState extends State<TimeSlotScreen> {
                 children: [
                   InkWell(
                     onTap: () {
-
-                      _goToPreviousDay();
-
+                      _changeDate(-1);
                     },
                     child: Icon(Icons.arrow_back_ios, size: 18),
                   ),
                   Text(
-                    currentDate.toString(),
+                    formattedDate,
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   InkWell(
                     onTap: () {
-                      _goToNextDay();
+                      _changeDate(1);
                     },
                     child: Icon(Icons.arrow_forward_ios, size: 18),
                   ),
@@ -150,8 +162,8 @@ class _TimeSlotScreenState extends State<TimeSlotScreen> {
               ),
             ),
 
-            const Text(
-              "1 Vehicle Available",
+            Text(
+              "$mTotalVehicle Vehicle Available",
               style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
             const SizedBox(height: 8),
@@ -166,8 +178,9 @@ class _TimeSlotScreenState extends State<TimeSlotScreen> {
                     flex: 1,
                     child: ListView.builder(
                       padding: EdgeInsets.all(8),
-                      itemCount:
-                          provider.rootData['data']['getnearestData'].length,
+                      itemCount: provider.rootData['status']
+                          ? provider.rootData['data']['getnearestData'].length
+                          : 0,
                       itemBuilder: (context, index) {
                         return InkWell(
                             onTap: () {

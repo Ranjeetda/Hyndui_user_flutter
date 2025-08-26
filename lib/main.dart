@@ -14,8 +14,10 @@ import 'package:lmm_user/provider/create_booking_provider.dart';
 import 'package:lmm_user/provider/fare_generate_seat.dart';
 import 'package:lmm_user/provider/help_support_provider.dart';
 import 'package:lmm_user/provider/load_chat_provider.dart';
+import 'package:lmm_user/provider/mytripes_provider.dart';
 import 'package:lmm_user/provider/payment_pay_provider.dart';
 import 'package:lmm_user/provider/profile_fetch_provider.dart';
+import 'package:lmm_user/provider/refresh_token_provider.dart';
 import 'package:lmm_user/provider/register_user_provider.dart';
 import 'package:lmm_user/provider/route_explore_provider.dart';
 import 'package:lmm_user/provider/route_search_provider.dart';
@@ -159,6 +161,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => PaymentPayProvider()),
         ChangeNotifierProvider(create: (_) => LoadChatProvider()),
         ChangeNotifierProvider(create: (_) => SendChatProvider()),
+        ChangeNotifierProvider(create: (_) => MytripesProvider()),
+        ChangeNotifierProvider(create: (_) => RefreshTokenProvider()),
       ],
       child:  MyApp(),
     ),
