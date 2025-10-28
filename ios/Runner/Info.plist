@@ -51,6 +51,15 @@
 	<!-- ✅ Added key for export compliance -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+    
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>This app needs access to the local network for debugging and communication.</string>
+
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_dartVmService._tcp</string>
+        <string>_http._tcp</string>
+    </array>
 
 </dict>
 </plist>
