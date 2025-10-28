@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -32,6 +31,9 @@ import 'package:lmm_user/resource/shared_preferences.dart';
 import 'package:lmm_user/ui/splash/splash_screen.dart';
 import 'package:provider/provider.dart';
 
+/// ---------------------------------------------------------------------------
+/// 🔔 Background Message Handler
+/// ---------------------------------------------------------------------------
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -40,20 +42,20 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('Handling a background message ${message.messageId}');
 }
 
-/// Create a [AndroidNotificationChannel] for heads up notifications
+/// ---------------------------------------------------------------------------
+/// 🔔 Local Notification Setup
+/// ---------------------------------------------------------------------------
 late AndroidNotificationChannel channel;
-
+late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 bool isFlutterLocalNotificationsInitialized = false;
 
 Future<void> setupFlutterNotifications() async {
-  if (isFlutterLocalNotificationsInitialized) {
-    return;
-  }
+  if (isFlutterLocalNotificationsInitialized) return;
+
   channel = const AndroidNotificationChannel(
-    'high_importance_channel', // id
-    'High Importance Notifications', // title
-    description:
-    'This channel is used for important notifications.', // description
+    'high_importance_channel',
+    'High Importance Notifications',
+    description: 'This channel is used for important notifications.',
     importance: Importance.high,
   );
 
@@ -69,45 +71,32 @@ Future<void> setupFlutterNotifications() async {
     badge: true,
     sound: true,
   );
+
   isFlutterLocalNotificationsInitialized = true;
 }
+
 void showFlutterNotification(RemoteMessage message) {
   if (message.data != null && !kIsWeb) {
     flutterLocalNotificationsPlugin.show(
-        message.data.hashCode,
-        message.data['title'],
-        message.data['body'],
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            channel.id,
-            channel.name,
-            channelDescription: channel.description,
-
-            icon: '@mipmap/ic_launcher',
-          ),
+      message.data.hashCode,
+      message.data['title'],
+      message.data['body'],
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          channel.id,
+          channel.name,
+          channelDescription: channel.description,
+          icon: '@mipmap/ic_launcher',
         ),
-        payload: message.data['link']);
+      ),
+      payload: message.data['link'],
+    );
   }
 }
 
-/// Initialize the [FlutterLocalNotificationsPlugin] package.
-late FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
-NotificationAppLaunchDetails? notificationAppLaunchDetails;
-
-void getToken() async {
-  String? mToken = await FirebaseMessaging.instance.getToken();
-  PrefUtils.setFcmToken(mToken!);
-  print("FCM Token ================> : $mToken");
-  String deviceInfo = await getDeviceInfo();
-  getDeviceType();
-  print("DeviceInfo  ================> : ${deviceInfo}");
-  PrefUtils.setDeviceInfo(deviceInfo);
-
-}
-Future<void> init() async {
-  await Prefs.init();
-}
-
+/// ---------------------------------------------------------------------------
+/// 🔧 Device Info Helpers
+/// ---------------------------------------------------------------------------
 Future<String> getDeviceInfo() async {
   final deviceInfoPlugin = DeviceInfoPlugin();
 
@@ -125,23 +114,75 @@ Future<String> getDeviceInfo() async {
 String getDeviceType() {
   if (Platform.isAndroid) {
     PrefUtils.setDeviceType('1');
-
     return 'android';
   } else if (Platform.isIOS) {
     PrefUtils.setDeviceType('2');
-
     return 'ios';
   } else {
     return 'unknown';
   }
 }
 
+/// ---------------------------------------------------------------------------
+/// 🔑 Get FCM Token (with APNS support on iOS)
+/// ---------------------------------------------------------------------------
+Future<void> getToken() async {
+  final messaging = FirebaseMessaging.instance;
+
+  if (Platform.isIOS) {
+    // Request iOS permissions
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus != AuthorizationStatus.authorized) {
+      print('🔕 Notifications not authorized on iOS');
+      return;
+    }
+
+    // Wait for APNS token
+    String? apnsToken = await messaging.getAPNSToken();
+    print('📱 APNS Token: $apnsToken');
+  }
+
+  // Now safely get FCM token
+  String? fcmToken = await messaging.getToken();
+  if (fcmToken != null) {
+    PrefUtils.setFcmToken(fcmToken);
+    print('🔥 FCM Token: $fcmToken');
+  }
+
+  // Store device info
+  String deviceInfo = await getDeviceInfo();
+  getDeviceType();
+  PrefUtils.setDeviceInfo(deviceInfo);
+
+  print('📲 Device Info: $deviceInfo');
+}
+
+/// ---------------------------------------------------------------------------
+/// 🧩 Initialization
+/// ---------------------------------------------------------------------------
+Future<void> init() async {
+  await Prefs.init();
+}
+
+/// ---------------------------------------------------------------------------
+/// 🏁 MAIN ENTRY POINT
+/// ---------------------------------------------------------------------------
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  init();
-  getToken();
+  await setupFlutterNotifications();
+  await init();
+
+  // Wait until permissions and APNS token ready (iOS safe)
+  await getToken();
+
   runApp(
     MultiProvider(
       providers: [
@@ -164,27 +205,29 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => MytripesProvider()),
         ChangeNotifierProvider(create: (_) => RefreshTokenProvider()),
       ],
-      child:  MyApp(),
+      child: MyApp(),
     ),
   );
+
   SystemChrome.setSystemUIOverlayStyle(
-    SystemUiOverlayStyle(
+    const SystemUiOverlayStyle(
       statusBarColor: AppColors.primaryColor,
       statusBarIconBrightness: Brightness.light,
     ),
   );
 }
 
+/// ---------------------------------------------------------------------------
+/// 🧭 ROOT APP WIDGET
+/// ---------------------------------------------------------------------------
 class MyApp extends StatefulWidget {
   @override
   _MyAppState createState() => _MyAppState();
 }
 
-
 class _MyAppState extends State<MyApp> {
-
   @override
-  initState() {
+  void initState() {
     super.initState();
     init();
   }
@@ -200,15 +243,14 @@ class _MyAppState extends State<MyApp> {
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         }),
         appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white, foregroundColor: Colors.black),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+        ),
         fontFamily: 'Nunito',
         primarySwatch: Colors.teal,
       ),
-
       home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
-
     );
   }
-
 }

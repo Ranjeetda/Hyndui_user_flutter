@@ -8,7 +8,6 @@ import 'package:lmm_user/resource/pref_utils.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:place_picker_google/place_picker_google.dart';
 import 'package:provider/provider.dart';
-
 import '../../provider/profile_fetch_provider.dart';
 import '../../provider/user_update_provider.dart';
 import '../../resource/Utils.dart';

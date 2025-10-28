@@ -6,13 +6,15 @@ plugins {
 apply plugin: 'com.google.gms.google-services'
 android {
     namespace = "com.lastmile.userapp"
-    compileSdkVersion 34
+    compileSdkVersion 36
     ndkVersion = flutter.ndkVersion
     //ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled true
+
     }
 
     kotlinOptions {
@@ -22,8 +24,8 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.lastmile.userapp"
-        minSdkVersion 23
-        targetSdkVersion 34
+        minSdkVersion 24
+        targetSdkVersion 36
         versionCode 1
         versionName "1.0.0"
         multiDexEnabled true
@@ -40,4 +42,13 @@ android {
 
 flutter {
     source = "../.."
+}
+dependencies {
+    // ✅ Required for core library desugaring (fixes flutter_local_notifications)
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
+
+    // ✅ Kotlin standard library
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+
+    // Other dependencies (Firebase, etc.) will be auto-injected by Flutter plugins
 }

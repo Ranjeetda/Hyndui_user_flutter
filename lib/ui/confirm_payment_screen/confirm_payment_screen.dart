@@ -65,12 +65,12 @@ class _ConfirmPaymentScreenState extends State<ConfirmPaymentScreen> {
 
 
       if (responseData['status'] == true && paymentMode ==online) {
-        Navigator.push(
+       /* Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => PaymentWebViewScreen(url: responseData['gateway_url'],),
           ),
-        );
+        );*/
 
       }else if (responseData['status'] == true &&paymentMode==cash) {
         showBookingSuccessDialog(context);
